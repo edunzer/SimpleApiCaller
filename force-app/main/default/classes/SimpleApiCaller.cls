@@ -19,6 +19,11 @@ public with sharing class SimpleApiCaller {
         public List<Header> headers;
         @InvocableVariable
         public String body;
+        // Enhancement: allow invocable input to control retry logic
+        @InvocableVariable(label='Enable Retries' description='Set to true to enable retry logic. Default is false.')
+        public Boolean enableRetries = false;
+        @InvocableVariable(label='Retry Count' description='Number of retry attempts if retries are enabled.')
+        public Integer retryCount;
     }
 
     // Inner class for API response
@@ -83,11 +88,22 @@ public with sharing class SimpleApiCaller {
             }
             httpReq.setTimeout(defaultTimeoutMs);
 
+            // Determine retry logic based on invocable input
+            Boolean doRetry = req.enableRetries != null ? req.enableRetries : false;
+            Integer effectiveMaxRetries = maxRetries;
+            if (doRetry) {
+                if (req.retryCount != null) {
+                    effectiveMaxRetries = req.retryCount;
+                }
+            } else {
+                effectiveMaxRetries = 0;
+            }
+
             Http http = new Http();
             Integer attempt = 0;
             Boolean success = false;
             Integer backoff = initialBackoffMs;
-            while (attempt <= maxRetries && !success) {
+            while (attempt <= effectiveMaxRetries && !success) {
                 attempt++;
                 try {
                     HttpResponse httpResp = http.send(httpReq);
@@ -98,7 +114,7 @@ public with sharing class SimpleApiCaller {
                         success = true;
                     } else if (httpResp.getStatusCode() == 429 || (httpResp.getStatusCode() >= 500 && httpResp.getStatusCode() < 600)) {
                         // Retry on 429 or 5xx
-                        if (attempt <= maxRetries) {
+                        if (attempt <= effectiveMaxRetries) {
                             // Exponential backoff
                             Long waitMs = backoff;
                             backoff *= 2;
