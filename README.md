@@ -16,9 +16,9 @@ Provides a flow-invocable method to make HTTP requests (GET, POST, etc.) to exte
 	- apiResponse always contains only the raw HTTP response body, or null if the request was invalid or an exception occurred.
 	- All error and status information is only in apiStatus and apiStatusCode.
 
+
 **Main Components:**
-- `Header` inner class: Represents a custom HTTP header (name, value)
-- `APIRequest` inner class: Represents an API request (url, method, contentType, headers, body)
+- `APIRequest` inner class: Represents an API request (url, method, contentType, headersJson, body, enableRetries, retryCount)
 - `APIResponse` inner class: Represents an API response (apiResponse: raw HTTP response body or null, apiStatus: status string, apiStatusCode: HTTP status code or error code)
 - `callApi(List<APIRequest>)`: Flow-invocable method to send requests and return responses
 
@@ -35,16 +35,11 @@ req.url = 'https://api.example.com/resource';
 req.method = 'POST';
 req.contentType = 'application/json';
 req.body = '{"foo":"bar"}';
-List<SimpleApiCaller.Header> headers = new List<SimpleApiCaller.Header>();
-SimpleApiCaller.Header h1 = new SimpleApiCaller.Header();
-h1.name = 'x-api-client-token';
-h1.value = 'abc123';
-headers.add(h1);
-SimpleApiCaller.Header h2 = new SimpleApiCaller.Header();
-h2.name = 'x-functions-key';
-h2.value = 'xyz456';
-headers.add(h2);
-req.headers = headers;
+// Set headers as a JSON string
+req.headersJson = '{"x-api-client-token":"abc123","x-functions-key":"xyz456"}';
+// Optionally enable retries
+req.enableRetries = true;
+req.retryCount = 2;
 List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<SimpleApiCaller.APIRequest>{req});
 System.debug(resp[0].apiStatus);
 System.debug(resp[0].apiStatusCode);
@@ -61,10 +56,17 @@ Contains unit tests for `SimpleApiCaller`, including:
 - Invalid input (missing required fields)
 - Bulk requests (multiple API calls in one invocation)
 
+
 **Test Coverage:**
-All major code paths are tested, including exception handling and retry logic. The test for invalid input now expects apiResponse to be null, matching the new error handling logic.
+All major code paths are tested, including:
+- Successful API call (200 response)
+- Error handling (400 response)
+- Retry logic (multiple 500s, then 200)
+- Invalid input (missing required fields; expects apiResponse to be null)
+- Bulk requests (multiple API calls in one invocation)
 
 ---
+
 **Configuration Details:**
 
 - **Timeout:** Controlled by the custom setting object `apiSettings__c` (field: `TimeoutMilliseconds__c`). If not set, defaults to 10,000 ms (10 seconds).
@@ -72,6 +74,7 @@ All major code paths are tested, including exception handling and retry logic. T
 	- `enableRetries` (Boolean): Set to true to enable retry logic.
 	- `retryCount` (Integer): Number of retry attempts if retries are enabled.
 	- No retry configuration is read from any custom setting.
+
 
 **How to Run Tests:**
 Run all tests in Salesforce Setup > Apex Test Execution, or use the Salesforce CLI:
@@ -86,4 +89,8 @@ sfdx force:apex:test:run -c -r human -w 10
 - Status: Active
 
 ---
+
+**Error Handling:**
+- If the request is invalid (missing url or method) or an exception occurs, `apiResponse` will be null. Error details will be in `apiStatus` and `apiStatusCode`.
+
 For more details, see the source code in `force-app/main/default/classes/`.

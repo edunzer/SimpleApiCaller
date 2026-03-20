@@ -25,16 +25,7 @@ public with sharing class SimpleApiCallerTest {
         req.method = 'POST';
         req.contentType = 'application/json';
         req.body = '{"foo":"bar"}';
-        List<SimpleApiCaller.Header> headers = new List<SimpleApiCaller.Header>();
-        SimpleApiCaller.Header h1 = new SimpleApiCaller.Header();
-        h1.name = 'x-api-client-token';
-        h1.value = 'abc123';
-        headers.add(h1);
-        SimpleApiCaller.Header h2 = new SimpleApiCaller.Header();
-        h2.name = 'x-functions-key';
-        h2.value = 'xyz456';
-        headers.add(h2);
-        req.headers = headers;
+        req.headersJson = '{"x-api-client-token":"abc123","x-functions-key":"xyz456"}';
         List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<SimpleApiCaller.APIRequest>{req});
         System.assertEquals(1, resp.size());
         System.assertEquals('Success', resp[0].apiStatus);
