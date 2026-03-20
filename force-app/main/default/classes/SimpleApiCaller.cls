@@ -41,18 +41,14 @@ public with sharing class SimpleApiCaller {
     public static List<APIResponse> callApi(List<APIRequest> requests) {
         List<APIResponse> responses = new List<APIResponse>();
         // Configurable settings
-        Integer defaultTimeoutMs = 10000; // 10 seconds
-        Integer maxRetries = 3;
+        Integer defaultTimeoutMs = 10000; // fallback default
         Integer initialBackoffMs = 1000; // 1 second
 
-        // Try to read from Custom Setting (if exists)
+        // Read timeout from custom setting apiSettings__c.TimeoutMilliseconds__c
         try {
-            // Example: Custom setting named 'SimpleApiCallerConfig__c' with Timeout__c, MaxRetries__c
-            // Replace with actual custom setting API name if needed
-            SimpleApiCallerConfig__c config = SimpleApiCallerConfig__c.getOrgDefaults();
-            if (config != null) {
-                if (config.Timeout__c != null) defaultTimeoutMs = Integer.valueOf(config.Timeout__c);
-                if (config.MaxRetries__c != null) maxRetries = Integer.valueOf(config.MaxRetries__c);
+            apiSettings__c config = apiSettings__c.getOrgDefaults();
+            if (config != null && config.TimeoutMilliseconds__c != null) {
+                defaultTimeoutMs = Integer.valueOf(config.TimeoutMilliseconds__c);
             }
         } catch (Exception e) {
             // Ignore if custom setting does not exist
@@ -88,15 +84,11 @@ public with sharing class SimpleApiCaller {
             }
             httpReq.setTimeout(defaultTimeoutMs);
 
-            // Determine retry logic based on invocable input
+            // Determine retry logic based only on invocable input
             Boolean doRetry = req.enableRetries != null ? req.enableRetries : false;
-            Integer effectiveMaxRetries = maxRetries;
-            if (doRetry) {
-                if (req.retryCount != null) {
-                    effectiveMaxRetries = req.retryCount;
-                }
-            } else {
-                effectiveMaxRetries = 0;
+            Integer effectiveMaxRetries = 0;
+            if (doRetry && req.retryCount != null) {
+                effectiveMaxRetries = req.retryCount;
             }
 
             Http http = new Http();
