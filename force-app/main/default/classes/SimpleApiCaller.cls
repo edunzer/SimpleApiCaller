@@ -15,8 +15,10 @@ public with sharing class SimpleApiCaller {
         public String method;
         @InvocableVariable
         public String contentType;
-        @InvocableVariable
-        public List<Header> headers;
+        // Removed: List<Header> headers (use headersJson instead)
+        // New: JSON string for headers
+        @InvocableVariable(label='Headers JSON' description='JSON string of headers, e.g. {"Authorization":"Bearer xyz","Accept":"application/json"}')
+        public String headersJson;
         @InvocableVariable
         public String body;
         // Enhancement: allow invocable input to control retry logic
@@ -74,12 +76,16 @@ public with sharing class SimpleApiCaller {
             if (!String.isBlank(req.contentType)) {
                 httpReq.setHeader('Content-Type', req.contentType);
             }
-            // Set custom headers
-            if (req.headers != null) {
-                for (Header h : req.headers) {
-                    if (h != null && !String.isBlank(h.name)) {
-                        httpReq.setHeader(h.name, h.value != null ? h.value : '');
+            // Set custom headers from JSON string if provided
+            if (!String.isBlank(req.headersJson)) {
+                try {
+                    Map<String, Object> headerMap = (Map<String, Object>)JSON.deserializeUntyped(req.headersJson);
+                    for (String key : headerMap.keySet()) {
+                        Object val = headerMap.get(key);
+                        httpReq.setHeader(key, val != null ? String.valueOf(val) : '');
                     }
+                } catch (Exception e) {
+                    // If JSON is invalid, ignore and proceed
                 }
             }
             httpReq.setTimeout(defaultTimeoutMs);
