@@ -10,8 +10,8 @@ Provides a flow-invocable method to make HTTP requests (GET, POST, etc.) to exte
 
 **Key Features:**
 - Supports custom HTTP methods, headers, and body
-- Handles configurable timeouts and retry logic (with exponential backoff)
-- Reads optional configuration from a custom setting (`SimpleApiCallerConfig__c`)
+- Handles configurable timeouts (via custom setting) and retry logic (via invocable input only, with exponential backoff)
+- Timeout is read from the custom setting object `apiSettings__c` (field: `TimeoutMilliseconds__c`). Retry logic is controlled only by the invocable method input variables (`enableRetries`, `retryCount`).
 - Returns structured responses:
 	- apiResponse always contains only the raw HTTP response body, or null if the request was invalid or an exception occurred.
 	- All error and status information is only in apiStatus and apiStatusCode.
@@ -35,10 +35,16 @@ req.url = 'https://api.example.com/resource';
 req.method = 'POST';
 req.contentType = 'application/json';
 req.body = '{"foo":"bar"}';
-req.headers = new List<SimpleApiCaller.Header>{
-	new SimpleApiCaller.Header(name='x-api-client-token', value='abc123'),
-	new SimpleApiCaller.Header(name='x-functions-key', value='xyz456')
-};
+List<SimpleApiCaller.Header> headers = new List<SimpleApiCaller.Header>();
+SimpleApiCaller.Header h1 = new SimpleApiCaller.Header();
+h1.name = 'x-api-client-token';
+h1.value = 'abc123';
+headers.add(h1);
+SimpleApiCaller.Header h2 = new SimpleApiCaller.Header();
+h2.name = 'x-functions-key';
+h2.value = 'xyz456';
+headers.add(h2);
+req.headers = headers;
 List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<SimpleApiCaller.APIRequest>{req});
 System.debug(resp[0].apiStatus);
 System.debug(resp[0].apiStatusCode);
@@ -56,8 +62,16 @@ Contains unit tests for `SimpleApiCaller`, including:
 - Bulk requests (multiple API calls in one invocation)
 
 **Test Coverage:**
-All major code paths are tested, including exception handling and retry logic.
-The test for invalid input now expects apiResponse to be null, matching the new error handling logic.
+All major code paths are tested, including exception handling and retry logic. The test for invalid input now expects apiResponse to be null, matching the new error handling logic.
+
+---
+**Configuration Details:**
+
+- **Timeout:** Controlled by the custom setting object `apiSettings__c` (field: `TimeoutMilliseconds__c`). If not set, defaults to 10,000 ms (10 seconds).
+- **Retry Logic:** Controlled only by the invocable method input variables:
+	- `enableRetries` (Boolean): Set to true to enable retry logic.
+	- `retryCount` (Integer): Number of retry attempts if retries are enabled.
+	- No retry configuration is read from any custom setting.
 
 **How to Run Tests:**
 Run all tests in Salesforce Setup > Apex Test Execution, or use the Salesforce CLI:
