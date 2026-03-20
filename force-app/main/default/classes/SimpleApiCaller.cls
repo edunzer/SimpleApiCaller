@@ -56,9 +56,9 @@ public with sharing class SimpleApiCaller {
         for (APIRequest req : requests) {
             APIResponse resp = new APIResponse();
             if (req == null || String.isBlank(req.url) || String.isBlank(req.method)) {
+                resp.apiResponse = null; // Explicitly set to null for errors
                 resp.apiStatus = 'Error';
                 resp.apiStatusCode = '400';
-                resp.apiResponse = 'Missing required fields: url and method are required.';
                 responses.add(resp);
                 continue;
             }
@@ -92,7 +92,7 @@ public with sharing class SimpleApiCaller {
                 try {
                     HttpResponse httpResp = http.send(httpReq);
                     resp.apiStatusCode = String.valueOf(httpResp.getStatusCode());
-                    resp.apiResponse = httpResp.getBody();
+                    resp.apiResponse = httpResp.getBody(); // Always raw API output
                     if (httpResp.getStatusCode() >= 200 && httpResp.getStatusCode() < 300) {
                         resp.apiStatus = 'Success';
                         success = true;
@@ -116,8 +116,8 @@ public with sharing class SimpleApiCaller {
                     }
                 } catch (Exception ex) {
                     resp.apiStatus = 'Exception';
-                    resp.apiResponse = ex.getMessage();
                     resp.apiStatusCode = 'Exception';
+                    // Do not set apiResponse to exception message; leave as null
                     success = true;
                 }
             }
