@@ -76,7 +76,7 @@ public with sharing class SimpleApiCallerTest {
         List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<SimpleApiCaller.APIRequest>{req});
         System.assertEquals('Error', resp[0].apiStatus);
         System.assertEquals('400', resp[0].apiStatusCode);
-        System.assert(resp[0].apiResponse.contains('Missing required fields'));
+        System.assertEquals(null, resp[0].apiResponse);
     }
 
     @IsTest static void testBulkRequests() {

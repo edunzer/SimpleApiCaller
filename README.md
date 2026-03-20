@@ -12,18 +12,21 @@ Provides a flow-invocable method to make HTTP requests (GET, POST, etc.) to exte
 - Supports custom HTTP methods, headers, and body
 - Handles configurable timeouts and retry logic (with exponential backoff)
 - Reads optional configuration from a custom setting (`SimpleApiCallerConfig__c`)
-- Returns structured responses with status, code, and body
+- Returns structured responses:
+	- apiResponse always contains only the raw HTTP response body, or null if the request was invalid or an exception occurred.
+	- All error and status information is only in apiStatus and apiStatusCode.
 
 **Main Components:**
 - `Header` inner class: Represents a custom HTTP header (name, value)
 - `APIRequest` inner class: Represents an API request (url, method, contentType, headers, body)
-- `APIResponse` inner class: Represents an API response (apiResponse, apiStatus, apiStatusCode)
+- `APIResponse` inner class: Represents an API response (apiResponse: raw HTTP response body or null, apiStatus: status string, apiStatusCode: HTTP status code or error code)
 - `callApi(List<APIRequest>)`: Flow-invocable method to send requests and return responses
 
 **Example Usage in Flow:**
 1. Add an Apex Action to your Flow and select `Simple External API Call`.
 2. Provide the required fields: `url`, `method`, and any optional headers/body.
 3. The response will include `apiStatus`, `apiStatusCode`, and `apiResponse`.
+	- If the request is invalid or an exception occurs, `apiResponse` will be null. Check `apiStatus` and `apiStatusCode` for error details.
 
 **Example Usage in Apex:**
 ```apex
@@ -40,6 +43,7 @@ List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<Simple
 System.debug(resp[0].apiStatus);
 System.debug(resp[0].apiStatusCode);
 System.debug(resp[0].apiResponse);
+// If the request is invalid or an exception occurs, apiResponse will be null. Check apiStatus and apiStatusCode for error details.
 ```
 
 #### 2. SimpleApiCallerTest.cls
@@ -53,6 +57,7 @@ Contains unit tests for `SimpleApiCaller`, including:
 
 **Test Coverage:**
 All major code paths are tested, including exception handling and retry logic.
+The test for invalid input now expects apiResponse to be null, matching the new error handling logic.
 
 **How to Run Tests:**
 Run all tests in Salesforce Setup > Apex Test Execution, or use the Salesforce CLI:
