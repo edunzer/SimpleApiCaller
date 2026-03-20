@@ -25,10 +25,16 @@ public with sharing class SimpleApiCallerTest {
         req.method = 'POST';
         req.contentType = 'application/json';
         req.body = '{"foo":"bar"}';
-        req.headers = new List<SimpleApiCaller.Header>{
-            new SimpleApiCaller.Header(name='x-api-client-token', value='abc123'),
-            new SimpleApiCaller.Header(name='x-functions-key', value='xyz456')
-        };
+        List<SimpleApiCaller.Header> headers = new List<SimpleApiCaller.Header>();
+        SimpleApiCaller.Header h1 = new SimpleApiCaller.Header();
+        h1.name = 'x-api-client-token';
+        h1.value = 'abc123';
+        headers.add(h1);
+        SimpleApiCaller.Header h2 = new SimpleApiCaller.Header();
+        h2.name = 'x-functions-key';
+        h2.value = 'xyz456';
+        headers.add(h2);
+        req.headers = headers;
         List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<SimpleApiCaller.APIRequest>{req});
         System.assertEquals(1, resp.size());
         System.assertEquals('Success', resp[0].apiStatus);
@@ -50,24 +56,36 @@ public with sharing class SimpleApiCallerTest {
         // First two responses are 500, third is 200
         List<Integer> codes = new List<Integer>{500, 500, 200};
         List<String> bodies = new List<String>{'fail1', 'fail2', 'ok'};
-        Test.setMock(HttpCalloutMock.class, new HttpCalloutMock() {
-            Integer callCount = 0;
-            public HTTPResponse respond(HTTPRequest req) {
-                HttpResponse res = new HttpResponse();
-                res.setHeader('Content-Type', 'application/json');
-                res.setBody(bodies[callCount]);
-                res.setStatusCode(codes[callCount]);
-                callCount++;
-                return res;
-            }
-        });
+        Test.setMock(HttpCalloutMock.class, new MockRetryHttpResponseGenerator(codes, bodies));
         SimpleApiCaller.APIRequest req = new SimpleApiCaller.APIRequest();
         req.url = 'https://api.example.com/resource';
         req.method = 'GET';
+        req.enableRetries = true;
+        req.retryCount = 2;
         List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<SimpleApiCaller.APIRequest>{req});
         System.assertEquals('Success', resp[0].apiStatus);
         System.assertEquals('200', resp[0].apiStatusCode);
         System.assertEquals('ok', resp[0].apiResponse);
+
+    }
+
+    // Helper mock for retry test
+    class MockRetryHttpResponseGenerator implements HttpCalloutMock {
+        private List<Integer> codes;
+        private List<String> bodies;
+        private Integer callCount = 0;
+        public MockRetryHttpResponseGenerator(List<Integer> codes, List<String> bodies) {
+            this.codes = codes;
+            this.bodies = bodies;
+        }
+        public HTTPResponse respond(HTTPRequest req) {
+            HttpResponse res = new HttpResponse();
+            res.setHeader('Content-Type', 'application/json');
+            res.setBody(bodies[callCount]);
+            res.setStatusCode(codes[callCount]);
+            callCount++;
+            return res;
+        }
     }
 
     @IsTest static void testInvalidInput() {
