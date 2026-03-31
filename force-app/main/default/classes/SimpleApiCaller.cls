@@ -130,8 +130,8 @@ public with sharing class SimpleApiCaller {
                     }
                 } catch (Exception ex) {
                     resp.apiStatus = 'Exception';
-                    resp.apiStatusCode = 'Exception';
-                    // Do not set apiResponse to exception message; leave as null
+                    resp.apiStatusCode = ex.getTypeName();
+                    resp.apiResponse = ex.getMessage();
                     success = true;
                 }
             }
