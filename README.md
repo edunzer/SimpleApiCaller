@@ -13,8 +13,9 @@ Provides a flow-invocable method to make HTTP requests (GET, POST, etc.) to exte
 - Handles configurable timeouts (via custom setting) and retry logic (via invocable input only, with exponential backoff)
 - Timeout is read from the custom setting object `apiSettings__c` (field: `TimeoutMilliseconds__c`). Retry logic is controlled only by the invocable method input variables (`enableRetries`, `retryCount`).
 - Returns structured responses:
-	- apiResponse always contains only the raw HTTP response body, or null if the request was invalid or an exception occurred.
-	- All error and status information is only in apiStatus and apiStatusCode.
+	- apiResponse contains the raw HTTP response body, or if an exception occurs, the exception message.
+	- On exception, apiStatus is "Exception", apiStatusCode is the exception type (e.g., System.CalloutException), and apiResponse contains the exception message.
+	- If the request is invalid (missing url or method), apiResponse will be null and error details will be in apiStatus and apiStatusCode.
 
 
 **Main Components:**
@@ -26,7 +27,7 @@ Provides a flow-invocable method to make HTTP requests (GET, POST, etc.) to exte
 1. Add an Apex Action to your Flow and select `Simple External API Call`.
 2. Provide the required fields: `url`, `method`, and any optional headers/body.
 3. The response will include `apiStatus`, `apiStatusCode`, and `apiResponse`.
-	- If the request is invalid or an exception occurs, `apiResponse` will be null. Check `apiStatus` and `apiStatusCode` for error details.
+	- If the request is invalid (missing url or method), `apiResponse` will be null. If an exception occurs, `apiResponse` will contain the exception message. In both cases, check `apiStatus` and `apiStatusCode` for error details.
 
 **Example Usage in Apex:**
 ```apex
@@ -44,7 +45,7 @@ List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<Simple
 System.debug(resp[0].apiStatus);
 System.debug(resp[0].apiStatusCode);
 System.debug(resp[0].apiResponse);
-// If the request is invalid or an exception occurs, apiResponse will be null. Check apiStatus and apiStatusCode for error details.
+// If the request is invalid (missing url or method), apiResponse will be null. If an exception occurs, apiResponse will contain the exception message. In both cases, check apiStatus and apiStatusCode for error details.
 ```
 
 #### 2. SimpleApiCallerTest.cls
@@ -90,7 +91,9 @@ sfdx force:apex:test:run -c -r human -w 10
 
 ---
 
+
 **Error Handling:**
-- If the request is invalid (missing url or method) or an exception occurs, `apiResponse` will be null. Error details will be in `apiStatus` and `apiStatusCode`.
+- If the request is invalid (missing url or method), `apiResponse` will be null. Error details will be in `apiStatus` and `apiStatusCode`.
+- If an exception occurs, `apiStatus` will be "Exception", `apiStatusCode` will be the exception type (e.g., System.CalloutException), and `apiResponse` will contain the exception message.
 
 For more details, see the source code in `force-app/main/default/classes/`.
