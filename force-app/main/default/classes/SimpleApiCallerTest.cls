@@ -88,6 +88,21 @@ public with sharing class SimpleApiCallerTest {
         System.assertEquals(null, resp[0].apiResponse);
     }
 
+    @IsTest static void testMaxRetriesExhausted() {
+        // All responses are 500 errors to exhaust retries
+        List<Integer> codes = new List<Integer>{500, 500, 500};
+        List<String> bodies = new List<String>{'fail1', 'fail2', 'fail3'};
+        Test.setMock(HttpCalloutMock.class, new MockRetryHttpResponseGenerator(codes, bodies));
+        SimpleApiCaller.APIRequest req = new SimpleApiCaller.APIRequest();
+        req.url = 'https://api.example.com/resource';
+        req.method = 'GET';
+        req.enableRetries = true;
+        req.retryCount = 2;
+        List<SimpleApiCaller.APIResponse> resp = SimpleApiCaller.callApi(new List<SimpleApiCaller.APIRequest>{req});
+        System.assertEquals('Error', resp[0].apiStatus);
+        System.assertEquals('500', resp[0].apiStatusCode);
+    }
+
     @IsTest static void testBulkRequests() {
         Test.setMock(HttpCalloutMock.class, new MockHttpResponseGenerator(200, 'ok-bulk'));
         List<SimpleApiCaller.APIRequest> reqs = new List<SimpleApiCaller.APIRequest>();
