@@ -116,6 +116,7 @@ public with sharing class SimpleApiCaller {
                             continue;
                         } else {
                             resp.apiStatus = 'Error';
+                            success = true;
                         }
                     } else {
                         resp.apiStatus = 'Error';
