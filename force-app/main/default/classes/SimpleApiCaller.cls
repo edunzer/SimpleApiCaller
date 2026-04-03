@@ -15,8 +15,6 @@ public with sharing class SimpleApiCaller {
         public String method;
         @InvocableVariable
         public String contentType;
-        // Removed: List<Header> headers (use headersJson instead)
-        // New: JSON string for headers
         @InvocableVariable(label='Headers JSON' description='JSON string of headers, e.g. {"Authorization":"Bearer xyz","Accept":"application/json"}')
         public String headersJson;
         @InvocableVariable
@@ -114,12 +112,7 @@ public with sharing class SimpleApiCaller {
                         // Retry on 429 or 5xx
                         if (attempt <= effectiveMaxRetries) {
                             // Exponential backoff
-                            Long waitMs = backoff;
                             backoff *= 2;
-                            System.runAs(new User(Id=UserInfo.getUserId())) {
-                                // Sleep is not available in Apex, so just continue
-                                // In real-world, use Platform Events or Scheduled Jobs for true backoff
-                            }
                             continue;
                         } else {
                             resp.apiStatus = 'Error';
