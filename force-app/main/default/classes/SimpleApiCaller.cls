@@ -36,6 +36,37 @@ public with sharing class SimpleApiCaller {
         public String apiStatusCode;
     }
 
+        // Utility: Recursively clean special Unicode characters from all string values in a JSON structure
+    private static Object cleanJsonSpecialChars(Object node) {
+        if (node == null) return null;
+        if (node instanceof Map<String, Object>) {
+            Map<String, Object> mapNode = (Map<String, Object>)node;
+            Map<String, Object> cleaned = new Map<String, Object>();
+            for (String k : mapNode.keySet()) {
+                cleaned.put(k, cleanJsonSpecialChars(mapNode.get(k)));
+            }
+            return cleaned;
+        } else if (node instanceof List<Object>) {
+            List<Object> listNode = (List<Object>)node;
+            List<Object> cleaned = new List<Object>();
+            for (Object item : listNode) {
+                cleaned.add(cleanJsonSpecialChars(item));
+            }
+            return cleaned;
+        } else if (node instanceof String) {
+            String s = (String)node;
+            // Remove special Unicode characters
+            s = s.replace('\u00A0', ' ');
+            s = s.replace('\u200B', '');
+            s = s.replace('\u200C', '');
+            s = s.replace('\u200D', '');
+            s = s.replace('\uFEFF', '');
+            return s;
+        } else {
+            return node;
+        }
+    }
+
     // Flow-invocable method stub
     @InvocableMethod(label='Simple External API Call' description='Makes HTTP requests to external APIs with custom method, headers, and body.')
     public static List<APIResponse> callApi(List<APIRequest> requests) {
@@ -67,8 +98,18 @@ public with sharing class SimpleApiCaller {
             HttpRequest httpReq = new HttpRequest();
             httpReq.setEndpoint(req.url);
             httpReq.setMethod(req.method != null ? req.method : 'POST');
+            // Normalize and clean JSON body if possible
             if (!String.isBlank(req.body)) {
-                httpReq.setBody(req.body);
+                String normalizedBody = req.body;
+                try {
+                    // Attempt to parse as JSON, clean all string values, then re-serialize
+                    Object parsed = JSON.deserializeUntyped(req.body);
+                    Object cleaned = cleanJsonSpecialChars(parsed);
+                    normalizedBody = JSON.serialize(cleaned);
+                } catch (Exception e) {
+                    // Not valid JSON, use original body
+                }
+                httpReq.setBody(normalizedBody);
             }
             // Set Content-Type
             if (!String.isBlank(req.contentType)) {
