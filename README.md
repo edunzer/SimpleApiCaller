@@ -2,6 +2,9 @@
 
 This project provides a generic, flow-invocable Apex class for making HTTP requests to external APIs from Salesforce, along with comprehensive unit tests.
 
+### May 2026 Update: JSON Body Normalization & Unicode Cleaning
+**New:** JSON request bodies are now automatically normalized and recursively cleaned of invisible/special Unicode characters (such as non-breaking spaces, zero-width spaces, and BOMs) before being sent. This prevents hidden formatting issues from causing 400 errors when using Flow or Apex. See "Key Features" below for details.
+
 ### Apex Classes
 
 #### 1. SimpleApiCaller.cls
@@ -10,18 +13,28 @@ Provides a flow-invocable method to make HTTP requests (GET, POST, etc.) to exte
 
 **Key Features:**
 - Supports custom HTTP methods, headers, and body
+- **Automatically normalizes and recursively cleans JSON request bodies of invisible/special Unicode characters** (such as non-breaking spaces, zero-width spaces, and BOMs) before sending. This prevents hidden formatting issues from Salesforce Flow or Apex from causing 400 errors. Applies only if the body is valid JSON.
 - Handles configurable timeouts (via custom setting) and retry logic (via invocable input only, with exponential backoff)
 - Timeout is read from the custom setting object `apiSettings__c` (field: `TimeoutMilliseconds__c`). Retry logic is controlled only by the invocable method input variables (`enableRetries`, `retryCount`).
 - Returns structured responses:
-	- apiResponse contains the raw HTTP response body, or if an exception occurs, the exception message.
-	- On exception, apiStatus is "Exception", apiStatusCode is the exception type (e.g., System.CalloutException), and apiResponse contains the exception message.
-	- If the request is invalid (missing url or method), apiResponse will be null and error details will be in apiStatus and apiStatusCode.
+    - apiResponse contains the raw HTTP response body, or if an exception occurs, the exception message.
+    - On exception, apiStatus is "Exception", apiStatusCode is the exception type (e.g., System.CalloutException), and apiResponse contains the exception message.
+    - If the request is invalid (missing url or method), apiResponse will be null and error details will be in apiStatus and apiStatusCode.
 
 
 **Main Components:**
 - `APIRequest` inner class: Represents an API request (url, method, contentType, headersJson, body, enableRetries, retryCount)
 - `APIResponse` inner class: Represents an API response (apiResponse: raw HTTP response body or null, apiStatus: status string, apiStatusCode: HTTP status code or error code)
 - `callApi(List<APIRequest>)`: Flow-invocable method to send requests and return responses
+
+**Technical Note:**
+If the request body is valid JSON, all string values (including nested ones) are recursively cleaned of the following invisible/special Unicode characters before being sent:
+- Non-breaking space (\u00A0)
+- Zero-width space (\u200B)
+- Zero-width non-joiner (\u200C)
+- Zero-width joiner (\u200D)
+- Byte order mark (BOM, \uFEFF)
+If the body is not valid JSON, it is sent as-is.
 
 **Example Usage in Flow:**
 1. Add an Apex Action to your Flow and select `Simple External API Call`.
